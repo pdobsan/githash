@@ -7,8 +7,9 @@ cabal-dev
 .virtualenv
 .hsenv
 .cabal-sandbox/
+dist-newstyle/
 cabal.sandbox.config
 cabal.config
-*.cabal
+cabal.project.local
 .stack-work/
 *~
