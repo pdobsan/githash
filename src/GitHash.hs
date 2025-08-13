@@ -45,6 +45,7 @@ module GitHash
   , giBranch
   , giDirty
   , giCommitDate
+  , giCommitTime
   , giCommitCount
   , giCommitMessage
   , giDescribe
@@ -83,6 +84,7 @@ data GitInfo = GitInfo
   , _giBranch :: !String
   , _giDirty :: !Bool
   , _giCommitDate :: !String
+  , _giCommitTime :: !Int
   , _giCommitCount :: !Int
   , _giFiles :: ![FilePath]
   , _giCommitMessage :: !String
@@ -97,7 +99,7 @@ data GitInfo = GitInfo
 giHash :: GitInfo -> String
 giHash = _giHash
 
--- | The hash of the most recent commit.
+-- | The name of the current branch
 --
 -- @since 0.1.0.0
 giBranch :: GitInfo -> String
@@ -106,8 +108,13 @@ giBranch = _giBranch
 giDirty :: GitInfo -> Bool
 giDirty = _giDirty
 
+-- | The date/time of the last commit formatted as a string respecting git's --date option.
 giCommitDate :: GitInfo -> String
 giCommitDate = _giCommitDate
+
+-- | The date/time of the last commit expressed as the number of seconds since the Epoch.
+giCommitTime :: GitInfo -> Int
+giCommitTime = _giCommitTime
 
 giCommitCount :: GitInfo -> Int
 giCommitCount = _giCommitCount
@@ -251,6 +258,12 @@ getGitInfo root = try $ do
 
   _giCommitDate <- run ["log", "HEAD", "-1", "--format=%cd"]
 
+  secondsSinceEpoch <- run ["log", "HEAD", "-1", "--format=%ct"]
+  _giCommitTime <-
+    case readMaybe secondsSinceEpoch of
+      Nothing -> throwIO $ GHEInvalidCommitTime root secondsSinceEpoch
+      Just x -> return x
+
   _giCommitMessage <- run ["log", "-1", "--pretty=%B"]
 
   _giDescribe <- run ["describe", "--always", "--long"]
@@ -281,6 +294,7 @@ runGit root args = do
 data GitHashException
   = GHECouldn'tReadFile !FilePath !IOException
   | GHEInvalidCommitCount !FilePath !String
+  | GHEInvalidCommitTime !FilePath !String
   | GHEInvalidGitFile !String
   | GHEGitRunFailed !FilePath ![String] !ExitCode !String !String
   | GHEGitRunException !FilePath ![String] !IOException
